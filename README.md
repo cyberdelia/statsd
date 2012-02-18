@@ -20,8 +20,8 @@ import "github.com/cyberdelia/statsd.go"
 ## Use
 
 ```go
-c := statsd.Dial('localhost:8125')
-c.Increment('incr', 1, 1)
-c.Decrement('decr', 1, 0.1)
-c.Timing('time', 320', 0.1)
+c := statsd.Dial("localhost:8125")
+c.Increment("incr", 1, 1)
+c.Decrement("decr", 1, 0.1)
+c.Timing("timer", 320, 0.1)
 ```
