@@ -48,7 +48,13 @@ func (c *Client) Send(stat string, rate float64, format string, args ...interfac
 			return nil
 		}
 	}
+
 	format = fmt.Sprintf("%s:%s", stat, format)
 	_, err := fmt.Fprintf(c.rw, format, args...)
+	if err != nil {
+		return err
+	}
+
+	err = c.rw.Flush()
 	return err
 }

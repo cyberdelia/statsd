@@ -19,7 +19,6 @@ func fake() io.ReadWriter {
 }
 
 func readData(rw *bufio.ReadWriter) string {
-	rw.Flush()
 	data, _, _ := rw.ReadLine()
 	return string(data)
 }
