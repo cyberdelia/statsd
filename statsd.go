@@ -1,3 +1,4 @@
+// Client library for statsd.
 package statsd
 
 import (
