@@ -1,20 +1,19 @@
-# statsd.go
+# statsd
 
-statsd.go is a client library for statsd.
+statsd is a client library for statsd written in Go.
 
 ## Installation
 
 Download and install :
 
 ```
-$ go get github.com/cyberdelia/statsd.go
-$ go install github.com/cyberdelia/statsd.go
+$ go get github.com/cyberdelia/statsd
 ```
 
 Add it to your code :
 
 ```go
-import "github.com/cyberdelia/statsd.go"
+import "github.com/cyberdelia/statsd"
 ```
 
 ## Use
