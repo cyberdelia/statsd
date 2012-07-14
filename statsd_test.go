@@ -6,6 +6,7 @@ import (
 	"github.com/bmizerany/assert"
 	"io"
 	"testing"
+	"time"
 )
 
 type ReadWriter struct {
@@ -39,18 +40,33 @@ func TestDecrement(t *testing.T) {
 	assert.Equal(t, data, "decr:-1|c")
 }
 
-func TestTiming(t *testing.T) {
-	c := newClient("<fake>", fake())
-	err := c.Timing("time", 350, 1)
-	assert.Equal(t, err, nil)
-	data := readData(c.rw)
-	assert.Equal(t, data, "time:350|ms")
-}
-
 func TestIncrementRate(t *testing.T) {
 	c := newClient("<fake>", fake())
 	err := c.Increment("incr", 1, 0.99)
 	assert.Equal(t, err, nil)
 	data := readData(c.rw)
 	assert.Equal(t, data, "incr:1|c|@0.99")
+}
+
+func TestMilliseconds(t *testing.T) {
+	msec, _ := time.ParseDuration("350ms")
+	assert.Equal(t, 350, millisecond(msec))
+	sec, _ := time.ParseDuration("5s")
+	assert.Equal(t, 5000, millisecond(sec))
+	nsec, _ := time.ParseDuration("50ns")
+	assert.Equal(t, 0, millisecond(nsec))
+}
+
+func TestTiming(t *testing.T) {
+	c := newClient("<fake>", fake())
+	err := c.Timing("timing", 350, 1)
+	assert.Equal(t, err, nil)
+	data := readData(c.rw)
+	assert.Equal(t, data, "timing:350|ms")
+}
+
+func TestTime(t *testing.T) {
+	c := newClient("<fake>", fake())
+	err := c.Time("time", 1, func() { time.Sleep(50e6) })
+	assert.Equal(t, err, nil)
 }

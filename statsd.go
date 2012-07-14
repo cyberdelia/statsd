@@ -7,11 +7,16 @@ import (
 	"io"
 	"math/rand"
 	"net"
+	"time"
 )
 
 type Client struct {
 	Name string
 	rw   *bufio.ReadWriter
+}
+
+func millisecond(d time.Duration) int {
+	return int(d.Seconds() * 1000)
 }
 
 func Dial(addr string) (*Client, error) {
@@ -39,6 +44,13 @@ func (c *Client) Decrement(stat string, count int, rate float64) error {
 
 func (c *Client) Timing(stat string, delta int, rate float64) error {
 	return c.Send(stat, rate, "%d|ms", delta)
+}
+
+func (c *Client) Time(stat string, rate float64, f func()) error {
+	ts := time.Now()
+	f()
+	delta := millisecond(time.Now().Sub(ts))
+	return c.Timing(stat, delta, rate)
 }
 
 func (c *Client) Send(stat string, rate float64, format string, args ...interface{}) error {
