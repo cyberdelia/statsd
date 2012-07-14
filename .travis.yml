@@ -1,2 +1,2 @@
 language: go
-install: go get -d -v && go test -i -v && go build -v
+install: go get -d -v github.com/bmizerany/assert && go get -d -v && go build -v && go test -i -v
