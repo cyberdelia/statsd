@@ -48,6 +48,14 @@ func TestIncrementRate(t *testing.T) {
 	assert.Equal(t, data, "incr:1|c|@0.99")
 }
 
+func TestGauge(t *testing.T) {
+	c := newClient("<fake>", fake())
+	err := c.Gauge("gauge", 300, 1)
+	assert.Equal(t, err, nil)
+	data := readData(c.rw)
+	assert.Equal(t, data, "gauge:300|g")
+}
+
 func TestMilliseconds(t *testing.T) {
 	msec, _ := time.ParseDuration("350ms")
 	assert.Equal(t, 350, millisecond(msec))
