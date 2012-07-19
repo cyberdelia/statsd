@@ -29,6 +29,14 @@ func Dial(addr string) (*Client, error) {
 	return newClient(addr, rw), nil
 }
 
+func DialTimeout(addr string, timeout time.Duration) (*Client, error) {
+	rw, err := net.DialTimeout("udp", addr, timeout)
+	if err != nil {
+		return nil, err
+	}
+	return newClient(addr, rw), nil
+}
+
 func newClient(name string, rw io.ReadWriter) *Client {
 	c := new(Client)
 	c.Name = name
