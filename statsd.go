@@ -38,10 +38,10 @@ func DialTimeout(addr string, timeout time.Duration) (*Client, error) {
 }
 
 func newClient(name string, rw io.ReadWriter) *Client {
-	c := new(Client)
-	c.Name = name
-	c.rw = bufio.NewReadWriter(bufio.NewReader(rw), bufio.NewWriter(rw))
-	return c
+	return &Client{
+		name,
+		bufio.NewReadWriter(bufio.NewReader(rw), bufio.NewWriter(rw)),
+	}
 }
 
 // Increment the counter for the given bucket
