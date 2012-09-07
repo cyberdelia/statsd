@@ -7,13 +7,15 @@ import (
 	"io"
 	"math/rand"
 	"net"
+	"sync"
 	"time"
 )
 
 // A statsd client representing a connection to a statsd server.
 type Client struct {
-	Name string
-	rw   *bufio.ReadWriter
+	Name  string
+	rw    *bufio.ReadWriter
+	mutex sync.Mutex
 }
 
 func millisecond(d time.Duration) int {
@@ -39,8 +41,8 @@ func DialTimeout(addr string, timeout time.Duration) (*Client, error) {
 
 func newClient(name string, rw io.ReadWriter) *Client {
 	return &Client{
-		name,
-		bufio.NewReadWriter(bufio.NewReader(rw), bufio.NewWriter(rw)),
+		Name: name,
+		rw:   bufio.NewReadWriter(bufio.NewReader(rw), bufio.NewWriter(rw)),
 	}
 }
 
@@ -82,6 +84,10 @@ func (c *Client) send(stat string, rate float64, format string, args ...interfac
 	}
 
 	format = fmt.Sprintf("%s:%s", stat, format)
+
+	c.mutex.Lock()
+	defer c.mutex.Unlock()
+
 	_, err := fmt.Fprintf(c.rw, format, args...)
 	if err != nil {
 		return err
