@@ -7,6 +7,7 @@ import (
 	"io"
 	"math/rand"
 	"net"
+	"sync"
 	"time"
 )
 
@@ -14,6 +15,7 @@ import (
 type Client struct {
 	Name string
 	rw   *bufio.ReadWriter
+	sync.Mutex
 }
 
 func millisecond(d time.Duration) int {
@@ -39,8 +41,8 @@ func DialTimeout(addr string, timeout time.Duration) (*Client, error) {
 
 func newClient(name string, rw io.ReadWriter) *Client {
 	return &Client{
-		name,
-		bufio.NewReadWriter(bufio.NewReader(rw), bufio.NewWriter(rw)),
+		Name: name,
+		rw:   bufio.NewReadWriter(bufio.NewReader(rw), bufio.NewWriter(rw)),
 	}
 }
 
@@ -82,6 +84,10 @@ func (c *Client) send(stat string, rate float64, format string, args ...interfac
 	}
 
 	format = fmt.Sprintf("%s:%s", stat, format)
+
+	c.Lock()
+	defer c.Unlock()
+
 	_, err := fmt.Fprintf(c.rw, format, args...)
 	if err != nil {
 		return err
