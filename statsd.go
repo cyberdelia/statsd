@@ -4,7 +4,6 @@ package statsd
 import (
 	"bufio"
 	"fmt"
-	"io"
 	"math/rand"
 	"net"
 	"sync"
@@ -13,8 +12,8 @@ import (
 
 // A statsd client representing a connection to a statsd server.
 type Client struct {
-	Name string
-	rw   *bufio.ReadWriter
+	conn *net.Conn
+	buf  *bufio.ReadWriter
 	sync.Mutex
 }
 
@@ -24,25 +23,25 @@ func millisecond(d time.Duration) int {
 
 // Dial connects to the given address on the given network using net.Dial and then returns a new Client for the connection.
 func Dial(addr string) (*Client, error) {
-	rw, err := net.Dial("udp", addr)
+	conn, err := net.Dial("udp", addr)
 	if err != nil {
 		return nil, err
 	}
-	return newClient(addr, rw), nil
+	return newClient(&conn), nil
 }
 
 func DialTimeout(addr string, timeout time.Duration) (*Client, error) {
-	rw, err := net.DialTimeout("udp", addr, timeout)
+	conn, err := net.DialTimeout("udp", addr, timeout)
 	if err != nil {
 		return nil, err
 	}
-	return newClient(addr, rw), nil
+	return newClient(&conn), nil
 }
 
-func newClient(name string, rw io.ReadWriter) *Client {
+func newClient(conn *net.Conn) *Client {
 	return &Client{
-		Name: name,
-		rw:   bufio.NewReadWriter(bufio.NewReader(rw), bufio.NewWriter(rw)),
+		conn: conn,
+		buf:  bufio.NewReadWriter(bufio.NewReader(*conn), bufio.NewWriter(*conn)),
 	}
 }
 
@@ -74,6 +73,15 @@ func (c *Client) Gauge(stat string, value int, rate float64) error {
 	return c.send(stat, rate, "%d|g", value)
 }
 
+func (c *Client) Close() error {
+	err := c.buf.Flush()
+	if err != nil {
+		return err
+	}
+	c.buf = nil
+	return (*c.conn).Close()
+}
+
 func (c *Client) send(stat string, rate float64, format string, args ...interface{}) error {
 	if rate < 1 {
 		if rand.Float64() < rate {
@@ -88,11 +96,10 @@ func (c *Client) send(stat string, rate float64, format string, args ...interfac
 	c.Lock()
 	defer c.Unlock()
 
-	_, err := fmt.Fprintf(c.rw, format, args...)
+	_, err := fmt.Fprintf(c.buf, format, args...)
 	if err != nil {
 		return err
 	}
 
-	err = c.rw.Flush()
-	return err
+	return c.buf.Flush()
 }
