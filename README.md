@@ -26,4 +26,6 @@ c.Timing("timer", 320, 0.1)
 c.Time("timer", 0.1, func() {
         // do something  
 })
+c.Gauge("gauge", 30, 1)
+c.Unique("unique", 765, 1)
 ```
