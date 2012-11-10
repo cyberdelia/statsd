@@ -73,6 +73,11 @@ func (c *Client) Gauge(stat string, value int, rate float64) error {
 	return c.send(stat, rate, "%d|g", value)
 }
 
+// Record unique occurences of events
+func (c *Client) Unique(stat string, value int, rate float64) error {
+	return c.send(stat, rate, "%d|s", value)
+}
+
 func (c *Client) Close() error {
 	err := c.buf.Flush()
 	if err != nil {

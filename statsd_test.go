@@ -52,6 +52,14 @@ func TestGauge(t *testing.T) {
 	assert.Equal(t, data, "gauge:300|g")
 }
 
+func TestUnique(t *testing.T) {
+	c := fakeClient()
+	err := c.Unique("unique", 765, 1)
+	assert.Equal(t, err, nil)
+	data := readData(c.buf)
+	assert.Equal(t, data, "unique:765|s")
+}
+
 func TestMilliseconds(t *testing.T) {
 	msec, _ := time.ParseDuration("350ms")
 	assert.Equal(t, 350, millisecond(msec))
