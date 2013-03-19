@@ -90,7 +90,7 @@ func (c *Client) Close() error {
 func (c *Client) send(stat string, rate float64, format string, args ...interface{}) error {
 	if rate < 1 {
 		if rand.Float64() < rate {
-			format = fmt.Sprintf("%s|@%1.2f", format, rate)
+			format = fmt.Sprintf("%s|@%g", format, rate)
 		} else {
 			return nil
 		}
