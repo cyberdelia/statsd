@@ -44,6 +44,15 @@ func TestIncrementRate(t *testing.T) {
 	assert.Equal(t, data, "incr:1|c|@0.99")
 }
 
+func TestPreciseRate(t *testing.T) {
+	c := fakeClient()
+	// The real use case here is rates like 0.0001.
+	err := c.Increment("incr", 1, 0.99901)
+	assert.Equal(t, err, nil)
+	data := readData(c.buf)
+	assert.Equal(t, data, "incr:1|c|@0.99901")
+}
+
 func TestGauge(t *testing.T) {
 	c := fakeClient()
 	err := c.Gauge("gauge", 300, 1)
