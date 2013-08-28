@@ -36,6 +36,14 @@ func TestDecrement(t *testing.T) {
 	assert.Equal(t, data, "decr:-1|c")
 }
 
+func TestDuration(t *testing.T) {
+	c := fakeClient()
+	err := c.Duration("timing", time.Duration(123456789), 1)
+	assert.Equal(t, err, nil)
+	data := readData(c.buf)
+	assert.Equal(t, data, "timing:123.456789|ms")
+}
+
 func TestIncrementRate(t *testing.T) {
 	c := fakeClient()
 	err := c.Increment("incr", 1, 0.99)

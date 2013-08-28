@@ -12,7 +12,7 @@ import (
 
 // A statsd client representing a connection to a statsd server.
 type Client struct {
-	conn *net.Conn
+	conn net.Conn
 	buf  *bufio.ReadWriter
 	sync.Mutex
 }
@@ -27,7 +27,7 @@ func Dial(addr string) (*Client, error) {
 	if err != nil {
 		return nil, err
 	}
-	return newClient(&conn), nil
+	return newClient(conn), nil
 }
 
 func DialTimeout(addr string, timeout time.Duration) (*Client, error) {
@@ -35,13 +35,13 @@ func DialTimeout(addr string, timeout time.Duration) (*Client, error) {
 	if err != nil {
 		return nil, err
 	}
-	return newClient(&conn), nil
+	return newClient(conn), nil
 }
 
-func newClient(conn *net.Conn) *Client {
+func newClient(conn net.Conn) *Client {
 	return &Client{
 		conn: conn,
-		buf:  bufio.NewReadWriter(bufio.NewReader(*conn), bufio.NewWriter(*conn)),
+		buf:  bufio.NewReadWriter(bufio.NewReader(conn), bufio.NewWriter(conn)),
 	}
 }
 
@@ -55,17 +55,21 @@ func (c *Client) Decrement(stat string, count int, rate float64) error {
 	return c.Increment(stat, -count, rate)
 }
 
-// Record time spend for the given bucket
+// Record time spent for the given bucket with time.Duration
+func (c *Client) Duration(stat string, duration time.Duration, rate float64) error {
+	return c.send(stat, rate, "%f|ms", duration.Seconds()*1000)
+}
+
+// Record time spent for the given bucket in milliseconds
 func (c *Client) Timing(stat string, delta int, rate float64) error {
 	return c.send(stat, rate, "%d|ms", delta)
 }
 
-// Calculate time spend in given function and send it
+// Calculate time spent in given function and send it
 func (c *Client) Time(stat string, rate float64, f func()) error {
 	ts := time.Now()
 	f()
-	delta := millisecond(time.Now().Sub(ts))
-	return c.Timing(stat, delta, rate)
+	return c.Duration(stat, time.Since(ts), rate)
 }
 
 // Record arbitrary values for the given bucket
@@ -78,13 +82,16 @@ func (c *Client) Unique(stat string, value int, rate float64) error {
 	return c.send(stat, rate, "%d|s", value)
 }
 
+func (c *Client) Flush() error {
+	return c.buf.Flush()
+}
+
 func (c *Client) Close() error {
-	err := c.buf.Flush()
-	if err != nil {
+	if err := c.Flush(); err != nil {
 		return err
 	}
 	c.buf = nil
-	return (*c.conn).Close()
+	return c.conn.Close()
 }
 
 func (c *Client) send(stat string, rate float64, format string, args ...interface{}) error {
@@ -106,5 +113,5 @@ func (c *Client) send(stat string, rate float64, format string, args ...interfac
 		return err
 	}
 
-	return c.buf.Flush()
+	return c.Flush()
 }
