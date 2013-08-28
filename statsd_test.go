@@ -80,10 +80,10 @@ func TestMilliseconds(t *testing.T) {
 
 func TestTiming(t *testing.T) {
 	c := fakeClient()
-	err := c.Timing("timing", 350, 1)
+	err := c.Timing("timing", 350*time.Millisecond, 1)
 	assert.Equal(t, err, nil)
 	data := readData(c.buf)
-	assert.Equal(t, data, "timing:350|ms")
+	assert.Equal(t, data, "timing:350.000000|ms")
 }
 
 func TestTime(t *testing.T) {
