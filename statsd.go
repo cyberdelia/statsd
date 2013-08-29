@@ -55,17 +55,17 @@ func (c *Client) Decrement(stat string, count int, rate float64) error {
 	return c.Increment(stat, -count, rate)
 }
 
-// Record time spend for the given bucket
+// Record time spent for the given bucket with time.Duration
 func (c *Client) Duration(stat string, duration time.Duration, rate float64) error {
 	return c.send(stat, rate, "%f|ms", duration.Seconds()*1000)
 }
 
-// Record time spend for the given bucket
+// Record time spent for the given bucket in milliseconds
 func (c *Client) Timing(stat string, delta int, rate float64) error {
 	return c.send(stat, rate, "%d|ms", delta)
 }
 
-// Calculate time spend in given function and send it
+// Calculate time spent in given function and send it
 func (c *Client) Time(stat string, rate float64, f func()) error {
 	ts := time.Now()
 	f()
