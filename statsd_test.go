@@ -9,7 +9,7 @@ import (
 )
 
 func fakeClient() *Client {
-	buffer := bytes.NewBufferString("")
+	buffer := new(bytes.Buffer)
 	return &Client{
 		buf: bufio.NewReadWriter(bufio.NewReader(buffer), bufio.NewWriter(buffer)),
 	}
