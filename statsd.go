@@ -1,4 +1,18 @@
-// Client library for statsd.
+/*
+Statsd client
+
+Supports counting, sampling, timing, gauges, sets and multi-metrics packet.
+
+Using the client to increment a counter:
+
+	client, err := statsd.Dial("127.0.0.1:8125")
+	if err != nil {
+		// handle error
+	}
+	defer client.Close()
+	err = client.Increment("buckets", 1, 1)
+
+*/
 package statsd
 
 import (
@@ -10,11 +24,15 @@ import (
 	"time"
 )
 
+const (
+	defaultBufSize = 512
+)
+
 // A statsd client representing a connection to a statsd server.
 type Client struct {
 	conn net.Conn
-	buf  *bufio.ReadWriter
-	sync.Mutex
+	buf  *bufio.Writer
+	m    sync.Mutex
 }
 
 func millisecond(d time.Duration) int {
@@ -27,21 +45,39 @@ func Dial(addr string) (*Client, error) {
 	if err != nil {
 		return nil, err
 	}
-	return newClient(conn), nil
+	return newClient(conn, 0), nil
 }
 
+// DialTimeout acts like Dial but takes a timeout. The timeout includes name resolution, if required.
 func DialTimeout(addr string, timeout time.Duration) (*Client, error) {
 	conn, err := net.DialTimeout("udp", addr, timeout)
 	if err != nil {
 		return nil, err
 	}
-	return newClient(conn), nil
+	return newClient(conn, 0), nil
 }
 
-func newClient(conn net.Conn) *Client {
+// DialSize acts like Dial but takes a packet size.
+// By default, the packet size is 512,
+// here are some guidelines to choose a proper size:
+// Fast Ethernet (1432) - This is most likely for Intranets.
+// Gigabit Ethernet (8932) - Jumbo frames can make use of this feature much more efficient.
+// Commodity Internet (512) - If you are routing over the internet a value in this range will be reasonable.
+func DialSize(addr string, size int) (*Client, error) {
+	conn, err := net.Dial("udp", addr)
+	if err != nil {
+		return nil, err
+	}
+	return newClient(conn, size), nil
+}
+
+func newClient(conn net.Conn, size int) *Client {
+	if size <= 0 {
+		size = defaultBufSize
+	}
 	return &Client{
 		conn: conn,
-		buf:  bufio.NewReadWriter(bufio.NewReader(conn), bufio.NewWriter(conn)),
+		buf:  bufio.NewWriterSize(conn, size),
 	}
 }
 
@@ -77,6 +113,16 @@ func (c *Client) Gauge(stat string, value int, rate float64) error {
 	return c.send(stat, rate, "%d|g", value)
 }
 
+// Increment the value of the gauge
+func (c *Client) IncrementGauge(stat string, value int, rate float64) error {
+	return c.send(stat, rate, "+%d|g", value)
+}
+
+// Decrement the value of the gauge
+func (c *Client) DecrementGauge(stat string, value int, rate float64) error {
+	return c.send(stat, rate, "-%d|g", value)
+}
+
 // Record unique occurences of events
 func (c *Client) Unique(stat string, value int, rate float64) error {
 	return c.send(stat, rate, "%d|s", value)
@@ -105,13 +151,21 @@ func (c *Client) send(stat string, rate float64, format string, args ...interfac
 
 	format = fmt.Sprintf("%s:%s", stat, format)
 
-	c.Lock()
-	defer c.Unlock()
+	c.m.Lock()
+	defer c.m.Unlock()
 
-	_, err := fmt.Fprintf(c.buf, format, args...)
-	if err != nil {
-		return err
+	// Flush data if we have reach the buffer limit
+	if c.buf.Available() < len(format) {
+		if err := c.Flush(); err != nil {
+			return nil
+		}
 	}
 
-	return c.Flush()
+	// Buffer is not empty, start filling it
+	if c.buf.Buffered() > 0 {
+		format = fmt.Sprintf("\n%s", format)
+	}
+
+	_, err := fmt.Fprintf(c.buf, format, args...)
+	return err
 }
