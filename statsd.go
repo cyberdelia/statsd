@@ -58,11 +58,7 @@ func DialTimeout(addr string, timeout time.Duration) (*Client, error) {
 }
 
 // DialSize acts like Dial but takes a packet size.
-// By default, the packet size is 512,
-// here are some guidelines to choose a proper size:
-// Fast Ethernet (1432) - This is most likely for Intranets.
-// Gigabit Ethernet (8932) - Jumbo frames can make use of this feature much more efficient.
-// Commodity Internet (512) - If you are routing over the internet a value in this range will be reasonable.
+// By default, the packet size is 512, see https://github.com/etsy/statsd/blob/master/docs/metric_types.md#multi-metric-packets for guidelines.
 func DialSize(addr string, size int) (*Client, error) {
 	conn, err := net.Dial("udp", addr)
 	if err != nil {
@@ -81,53 +77,54 @@ func newClient(conn net.Conn, size int) *Client {
 	}
 }
 
-// Increment the counter for the given bucket
+// Increment the counter for the given bucket.
 func (c *Client) Increment(stat string, count int, rate float64) error {
 	return c.send(stat, rate, "%d|c", count)
 }
 
-// Decrement the counter for the given bucket
+// Decrement the counter for the given bucket.
 func (c *Client) Decrement(stat string, count int, rate float64) error {
 	return c.Increment(stat, -count, rate)
 }
 
-// Record time spent for the given bucket with time.Duration
+// Record time spent for the given bucket with time.Duration.
 func (c *Client) Duration(stat string, duration time.Duration, rate float64) error {
 	return c.send(stat, rate, "%f|ms", duration.Seconds()*1000)
 }
 
-// Record time spent for the given bucket in milliseconds
+// Record time spent for the given bucket in milliseconds.
 func (c *Client) Timing(stat string, delta int, rate float64) error {
 	return c.send(stat, rate, "%d|ms", delta)
 }
 
-// Calculate time spent in given function and send it
+// Calculate time spent in given function and send it.
 func (c *Client) Time(stat string, rate float64, f func()) error {
 	ts := time.Now()
 	f()
 	return c.Duration(stat, time.Since(ts), rate)
 }
 
-// Record arbitrary values for the given bucket
+// Record arbitrary values for the given bucket.
 func (c *Client) Gauge(stat string, value int, rate float64) error {
 	return c.send(stat, rate, "%d|g", value)
 }
 
-// Increment the value of the gauge
+// Increment the value of the gauge.
 func (c *Client) IncrementGauge(stat string, value int, rate float64) error {
 	return c.send(stat, rate, "+%d|g", value)
 }
 
-// Decrement the value of the gauge
+// Decrement the value of the gauge.
 func (c *Client) DecrementGauge(stat string, value int, rate float64) error {
 	return c.send(stat, rate, "-%d|g", value)
 }
 
-// Record unique occurences of events
+// Record unique occurences of events.
 func (c *Client) Unique(stat string, value int, rate float64) error {
 	return c.send(stat, rate, "%d|s", value)
 }
 
+// Flush writes any buffered data to the network.
 func (c *Client) Flush() error {
 	return c.buf.Flush()
 }
