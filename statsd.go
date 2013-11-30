@@ -129,6 +129,7 @@ func (c *Client) Flush() error {
 	return c.buf.Flush()
 }
 
+// Closes the connection.
 func (c *Client) Close() error {
 	if err := c.Flush(); err != nil {
 		return err
