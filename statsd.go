@@ -5,7 +5,7 @@ Supports counting, sampling, timing, gauges, sets and multi-metrics packet.
 
 Using the client to increment a counter:
 
-	client, err := statsd.Dial("127.0.0.1:8125")
+	client, err := statsdclient.Dial("127.0.0.1:8125")
 	if err != nil {
 		// handle error
 	}
@@ -13,7 +13,7 @@ Using the client to increment a counter:
 	err = client.Increment("buckets", 1, 1)
 
 */
-package statsd
+package statsdclient
 
 import (
 	"bufio"
@@ -33,6 +33,9 @@ type Client struct {
 	conn net.Conn
 	buf  *bufio.Writer
 	m    sync.Mutex
+
+	// The prefix to be added to every key. Should include the "." at the end if desired
+	prefix string
 }
 
 func millisecond(d time.Duration) int {
@@ -75,6 +78,12 @@ func newClient(conn net.Conn, size int) *Client {
 		conn: conn,
 		buf:  bufio.NewWriterSize(conn, size),
 	}
+}
+
+// Set the key prefix for the client. All future stats will be sent with the
+// prefix value prepended to the bucket
+func (c *Client) SetPrefix(prefix string) {
+	c.prefix = prefix
 }
 
 // Increment the counter for the given bucket.
@@ -147,7 +156,7 @@ func (c *Client) send(stat string, rate float64, format string, args ...interfac
 		}
 	}
 
-	format = fmt.Sprintf("%s:%s", stat, format)
+	format = fmt.Sprintf("%s%s:%s", c.prefix, stat, format)
 
 	c.m.Lock()
 	defer c.m.Unlock()

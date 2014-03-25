@@ -1,4 +1,4 @@
-package statsd
+package statsdclient
 
 import (
 	"bufio"
@@ -165,4 +165,17 @@ func TestMultiPacketOverflow(t *testing.T) {
 	err := c.Flush()
 	assert.Equal(t, err, nil)
 	assert.Equal(t, buf.String(), "unique:765|s")
+}
+
+func TestPrefix(t *testing.T) {
+	buf := new(bytes.Buffer)
+	c := fakeClient(buf)
+	c.SetPrefix(MakePrefix("test", "statsdclient", "test.example.com"))
+	err := c.Increment("key", 1, 1.0)
+	assert.Equal(t, err, nil)
+
+	err = c.Flush()
+	assert.Equal(t, err, nil)
+
+	assert.Equal(t, buf.String(), "test.statsdclient.test_example_com.key:1|c")
 }
