@@ -28,7 +28,7 @@ const (
 	defaultBufSize = 512
 )
 
-// A statsd client representing a connection to a statsd server.
+// Client is statsd client representing a connection to a statsd server.
 type Client struct {
 	conn net.Conn
 	buf  *bufio.Writer
@@ -77,59 +77,59 @@ func newClient(conn net.Conn, size int) *Client {
 	}
 }
 
-// Increment the counter for the given bucket.
+// Increment increments the counter for the given bucket.
 func (c *Client) Increment(stat string, count int, rate float64) error {
 	return c.send(stat, rate, "%d|c", count)
 }
 
-// Decrement the counter for the given bucket.
+// Decrement decrements the counter for the given bucket.
 func (c *Client) Decrement(stat string, count int, rate float64) error {
 	return c.Increment(stat, -count, rate)
 }
 
-// Record time spent for the given bucket with time.Duration.
+// Duration records time spent for the given bucket with time.Duration.
 func (c *Client) Duration(stat string, duration time.Duration, rate float64) error {
 	return c.send(stat, rate, "%f|ms", duration.Seconds()*1000)
 }
 
-// Record time spent for the given bucket in milliseconds.
+// Timing records time spent for the given bucket in milliseconds.
 func (c *Client) Timing(stat string, delta int, rate float64) error {
 	return c.send(stat, rate, "%d|ms", delta)
 }
 
-// Calculate time spent in given function and send it.
+// Time calculates time spent in given function and send it.
 func (c *Client) Time(stat string, rate float64, f func()) error {
 	ts := time.Now()
 	f()
 	return c.Duration(stat, time.Since(ts), rate)
 }
 
-// Record arbitrary values for the given bucket.
+// Gauge records arbitrary values for the given bucket.
 func (c *Client) Gauge(stat string, value int, rate float64) error {
 	return c.send(stat, rate, "%d|g", value)
 }
 
-// Increment the value of the gauge.
+// IncrementGauge increments the value of the gauge.
 func (c *Client) IncrementGauge(stat string, value int, rate float64) error {
 	return c.send(stat, rate, "+%d|g", value)
 }
 
-// Decrement the value of the gauge.
+// DecrementGauge decrements the value of the gauge.
 func (c *Client) DecrementGauge(stat string, value int, rate float64) error {
 	return c.send(stat, rate, "-%d|g", value)
 }
 
-// Record unique occurences of events.
+// Unique records unique occurences of events.
 func (c *Client) Unique(stat string, value int, rate float64) error {
 	return c.send(stat, rate, "%d|s", value)
 }
 
-// Flush writes any buffered data to the network.
+// Flush flushes writes any buffered data to the network.
 func (c *Client) Flush() error {
 	return c.buf.Flush()
 }
 
-// Closes the connection.
+// Close closes the connection.
 func (c *Client) Close() error {
 	if err := c.Flush(); err != nil {
 		return err
