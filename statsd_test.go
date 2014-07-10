@@ -15,7 +15,7 @@ func fakeClient(buffer *bytes.Buffer) *Client {
 
 func assert(t *testing.T, value, control string) {
 	if value != control {
-		t.Error("incorrect command, want '%s', got '%s'", control, value)
+		t.Errorf("incorrect command, want '%s', got '%s'", control, value)
 	}
 }
 
@@ -152,7 +152,7 @@ func TestMilliseconds(t *testing.T) {
 	for i, mt := range millisecondTests {
 		value := millisecond(mt.duration)
 		if value != mt.control {
-			t.Error("%d: incorrect value, want %d, got %d", i, mt.control, value)
+			t.Errorf("%d: incorrect value, want %d, got %d", i, mt.control, value)
 		}
 	}
 }
