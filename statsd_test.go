@@ -3,7 +3,6 @@ package statsd
 import (
 	"bufio"
 	"bytes"
-	"github.com/bmizerany/assert"
 	"testing"
 	"time"
 )
@@ -14,44 +13,54 @@ func fakeClient(buffer *bytes.Buffer) *Client {
 	}
 }
 
+func assert(t *testing.T, value, control string) {
+	if value != control {
+		t.Error("incorrect command, want '%s', got '%s'", control, value)
+	}
+}
+
 func TestIncrement(t *testing.T) {
 	buf := new(bytes.Buffer)
 	c := fakeClient(buf)
 	err := c.Increment("incr", 1, 1)
-	assert.Equal(t, err, nil)
-	err = c.Flush()
-	assert.Equal(t, err, nil)
-	assert.Equal(t, buf.String(), "incr:1|c")
+	if err != nil {
+		t.Fatal(err)
+	}
+	c.Flush()
+	assert(t, buf.String(), "incr:1|c")
 }
 
 func TestDecrement(t *testing.T) {
 	buf := new(bytes.Buffer)
 	c := fakeClient(buf)
 	err := c.Decrement("decr", 1, 1)
-	assert.Equal(t, err, nil)
-	err = c.Flush()
-	assert.Equal(t, err, nil)
-	assert.Equal(t, buf.String(), "decr:-1|c")
+	if err != nil {
+		t.Fatal(err)
+	}
+	c.Flush()
+	assert(t, buf.String(), "decr:-1|c")
 }
 
 func TestDuration(t *testing.T) {
 	buf := new(bytes.Buffer)
 	c := fakeClient(buf)
 	err := c.Duration("timing", time.Duration(123456789), 1)
-	assert.Equal(t, err, nil)
-	err = c.Flush()
-	assert.Equal(t, err, nil)
-	assert.Equal(t, buf.String(), "timing:123.456789|ms")
+	if err != nil {
+		t.Fatal(err)
+	}
+	c.Flush()
+	assert(t, buf.String(), "timing:123.456789|ms")
 }
 
 func TestIncrementRate(t *testing.T) {
 	buf := new(bytes.Buffer)
 	c := fakeClient(buf)
 	err := c.Increment("incr", 1, 0.99)
-	assert.Equal(t, err, nil)
-	err = c.Flush()
-	assert.Equal(t, err, nil)
-	assert.Equal(t, buf.String(), "incr:1|c|@0.99")
+	if err != nil {
+		t.Fatal(err)
+	}
+	c.Flush()
+	assert(t, buf.String(), "incr:1|c|@0.99")
 }
 
 func TestPreciseRate(t *testing.T) {
@@ -59,98 +68,128 @@ func TestPreciseRate(t *testing.T) {
 	c := fakeClient(buf)
 	// The real use case here is rates like 0.0001.
 	err := c.Increment("incr", 1, 0.99901)
-	assert.Equal(t, err, nil)
-	err = c.Flush()
-	assert.Equal(t, err, nil)
-	assert.Equal(t, buf.String(), "incr:1|c|@0.99901")
+	if err != nil {
+		t.Fatal(err)
+	}
+	c.Flush()
+	assert(t, buf.String(), "incr:1|c|@0.99901")
 }
 
 func TestRate(t *testing.T) {
 	buf := new(bytes.Buffer)
 	c := fakeClient(buf)
 	err := c.Increment("incr", 1, 0)
-	assert.Equal(t, err, nil)
-	err = c.Flush()
-	assert.Equal(t, err, nil)
-	assert.Equal(t, buf.String(), "")
+	if err != nil {
+		t.Fatal(err)
+	}
+	c.Flush()
+	assert(t, buf.String(), "")
 }
 
 func TestGauge(t *testing.T) {
 	buf := new(bytes.Buffer)
 	c := fakeClient(buf)
 	err := c.Gauge("gauge", 300, 1)
-	assert.Equal(t, err, nil)
-	err = c.Flush()
-	assert.Equal(t, err, nil)
-	assert.Equal(t, buf.String(), "gauge:300|g")
+	if err != nil {
+		t.Fatal(err)
+	}
+	c.Flush()
+	assert(t, buf.String(), "gauge:300|g")
 }
 
 func TestIncrementGauge(t *testing.T) {
 	buf := new(bytes.Buffer)
 	c := fakeClient(buf)
 	err := c.IncrementGauge("gauge", 10, 1)
-	assert.Equal(t, err, nil)
-	err = c.Flush()
-	assert.Equal(t, err, nil)
-	assert.Equal(t, buf.String(), "gauge:+10|g")
+	if err != nil {
+		t.Fatal(err)
+	}
+	c.Flush()
+	assert(t, buf.String(), "gauge:+10|g")
 }
 
 func TestDecrementGauge(t *testing.T) {
 	buf := new(bytes.Buffer)
 	c := fakeClient(buf)
 	err := c.DecrementGauge("gauge", 4, 1)
-	assert.Equal(t, err, nil)
-	err = c.Flush()
-	assert.Equal(t, err, nil)
-	assert.Equal(t, buf.String(), "gauge:-4|g")
+	if err != nil {
+		t.Fatal(err)
+	}
+	c.Flush()
+	assert(t, buf.String(), "gauge:-4|g")
 }
 
 func TestUnique(t *testing.T) {
 	buf := new(bytes.Buffer)
 	c := fakeClient(buf)
 	err := c.Unique("unique", 765, 1)
-	assert.Equal(t, err, nil)
-	err = c.Flush()
-	assert.Equal(t, err, nil)
-	assert.Equal(t, buf.String(), "unique:765|s")
+	if err != nil {
+		t.Fatal(err)
+	}
+	c.Flush()
+	assert(t, buf.String(), "unique:765|s")
+}
+
+var millisecondTests = []struct {
+	duration time.Duration
+	control  int
+}{
+	{
+		duration: 350 * time.Millisecond,
+		control:  350,
+	},
+	{
+		duration: 5 * time.Second,
+		control:  5000,
+	},
+	{
+		duration: 50 * time.Nanosecond,
+		control:  0,
+	},
 }
 
 func TestMilliseconds(t *testing.T) {
-	msec, _ := time.ParseDuration("350ms")
-	assert.Equal(t, 350, millisecond(msec))
-	sec, _ := time.ParseDuration("5s")
-	assert.Equal(t, 5000, millisecond(sec))
-	nsec, _ := time.ParseDuration("50ns")
-	assert.Equal(t, 0, millisecond(nsec))
+	for i, mt := range millisecondTests {
+		value := millisecond(mt.duration)
+		if value != mt.control {
+			t.Error("%d: incorrect value, want %d, got %d", i, mt.control, value)
+		}
+	}
 }
 
 func TestTiming(t *testing.T) {
 	buf := new(bytes.Buffer)
 	c := fakeClient(buf)
 	err := c.Timing("timing", 350, 1)
-	assert.Equal(t, err, nil)
-	err = c.Flush()
-	assert.Equal(t, err, nil)
-	assert.Equal(t, buf.String(), "timing:350|ms")
+	if err != nil {
+		t.Fatal(err)
+	}
+	c.Flush()
+	assert(t, buf.String(), "timing:350|ms")
 }
 
 func TestTime(t *testing.T) {
 	buf := new(bytes.Buffer)
 	c := fakeClient(buf)
 	err := c.Time("time", 1, func() { time.Sleep(50e6) })
-	assert.Equal(t, err, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
 }
 
 func TestMultiPacket(t *testing.T) {
 	buf := new(bytes.Buffer)
 	c := fakeClient(buf)
 	err := c.Unique("unique", 765, 1)
-	assert.Equal(t, err, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
 	err = c.Unique("unique", 765, 1)
-	assert.Equal(t, err, nil)
-	err = c.Flush()
-	assert.Equal(t, err, nil)
-	assert.Equal(t, buf.String(), "unique:765|s\nunique:765|s")
+	if err != nil {
+		t.Fatal(err)
+	}
+	c.Flush()
+	assert(t, buf.String(), "unique:765|s\nunique:765|s")
 }
 
 func TestMultiPacketOverflow(t *testing.T) {
@@ -158,11 +197,12 @@ func TestMultiPacketOverflow(t *testing.T) {
 	c := fakeClient(buf)
 	for i := 0; i < 40; i++ {
 		err := c.Unique("unique", 765, 1)
-		assert.Equal(t, err, nil)
+		if err != nil {
+			t.Fatal(err)
+		}
 	}
-	assert.Equal(t, buf.String(), "unique:765|s\nunique:765|s\nunique:765|s\nunique:765|s\nunique:765|s\nunique:765|s\nunique:765|s\nunique:765|s\nunique:765|s\nunique:765|s\nunique:765|s\nunique:765|s\nunique:765|s\nunique:765|s\nunique:765|s\nunique:765|s\nunique:765|s\nunique:765|s\nunique:765|s\nunique:765|s\nunique:765|s\nunique:765|s\nunique:765|s\nunique:765|s\nunique:765|s\nunique:765|s\nunique:765|s\nunique:765|s\nunique:765|s\nunique:765|s\nunique:765|s\nunique:765|s\nunique:765|s\nunique:765|s\nunique:765|s\nunique:765|s\nunique:765|s\nunique:765|s\nunique:765|s")
+	assert(t, buf.String(), "unique:765|s\nunique:765|s\nunique:765|s\nunique:765|s\nunique:765|s\nunique:765|s\nunique:765|s\nunique:765|s\nunique:765|s\nunique:765|s\nunique:765|s\nunique:765|s\nunique:765|s\nunique:765|s\nunique:765|s\nunique:765|s\nunique:765|s\nunique:765|s\nunique:765|s\nunique:765|s\nunique:765|s\nunique:765|s\nunique:765|s\nunique:765|s\nunique:765|s\nunique:765|s\nunique:765|s\nunique:765|s\nunique:765|s\nunique:765|s\nunique:765|s\nunique:765|s\nunique:765|s\nunique:765|s\nunique:765|s\nunique:765|s\nunique:765|s\nunique:765|s\nunique:765|s")
 	buf.Reset()
-	err := c.Flush()
-	assert.Equal(t, err, nil)
-	assert.Equal(t, buf.String(), "unique:765|s")
+	c.Flush()
+	assert(t, buf.String(), "unique:765|s")
 }
