@@ -28,9 +28,12 @@ const (
 	defaultBufSize = 512
 )
 
+var errMetricTooLarge = fmt.Errorf("metric too large for transport")
+
 // Client is statsd client representing a connection to a statsd server.
 type Client struct {
 	conn net.Conn
+	size int
 	buf  *bufio.Writer
 	m    sync.Mutex
 }
@@ -57,8 +60,11 @@ func DialTimeout(addr string, timeout time.Duration) (*Client, error) {
 	return newClient(conn, 0), nil
 }
 
-// DialSize acts like Dial but takes a packet size.
-// By default, the packet size is 512, see https://github.com/etsy/statsd/blob/master/docs/metric_types.md#multi-metric-packets for guidelines.
+// DialSize acts like Dial but takes a packet size.  Packet size limits the
+// size of metric batches (as well as the size of individual metrics).  If size
+// is 0, the default packet size of 512 bytes is used. Guidelines for packet
+// size can be found in the statsd documentation
+// (https://github.com/etsy/statsd/blob/master/docs/metric_types.md#multi-metric-packets).
 func DialSize(addr string, size int) (*Client, error) {
 	conn, err := net.Dial("udp", addr)
 	if err != nil {
@@ -73,6 +79,7 @@ func newClient(conn net.Conn, size int) *Client {
 	}
 	return &Client{
 		conn: conn,
+		size: size,
 		buf:  bufio.NewWriterSize(conn, size),
 	}
 }
@@ -152,18 +159,28 @@ func (c *Client) send(stat string, rate float64, format string, args ...interfac
 	c.m.Lock()
 	defer c.m.Unlock()
 
-	// Flush data if we have reach the buffer limit
-	if c.buf.Available() < len(format) {
+	// Check the length of the metric string. Flush the buffer if necessary.
+	if len(format) > c.size {
+		return errMetricTooLarge
+	}
+	nbuf, navail := c.buf.Buffered(), c.buf.Available()
+	nrequire := len(format)
+	iscat := nbuf > 0 // Concatenate to the buffer w/ '\n'
+	if iscat {
+		nrequire++
+	}
+	if navail < nrequire {
 		if err := c.Flush(); err != nil {
-			return nil
+			return err
 		}
+		iscat = false
 	}
 
-	// Buffer is not empty, start filling it
-	if c.buf.Buffered() > 0 {
+	// Write the metric to the buffer. No flush occurs.
+	if iscat {
 		format = fmt.Sprintf("\n%s", format)
 	}
-
 	_, err := fmt.Fprintf(c.buf, format, args...)
+
 	return err
 }

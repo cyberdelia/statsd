@@ -3,13 +3,15 @@ package statsd
 import (
 	"bufio"
 	"bytes"
+	"strings"
 	"testing"
 	"time"
 )
 
 func fakeClient(buffer *bytes.Buffer) *Client {
 	return &Client{
-		buf: bufio.NewWriterSize(buffer, defaultBufSize),
+		size: defaultBufSize,
+		buf:  bufio.NewWriterSize(buffer, defaultBufSize),
 	}
 }
 
@@ -17,6 +19,20 @@ func assert(t *testing.T, value, control string) {
 	if value != control {
 		t.Errorf("incorrect command, want '%s', got '%s'", control, value)
 	}
+}
+
+func TestMetricTooLarge(t *testing.T) {
+	buf := new(bytes.Buffer)
+	c := fakeClient(buf)
+	err := c.Increment(strings.Repeat("a.man.a.plan.a.canal.panama", 300), 10, 1.0)
+	if err == nil {
+		t.Fatal("unexpected success incrementing long metric name")
+	}
+	if err != errMetricTooLarge {
+		t.Fatalf("unexpected %T error: %v", err, err)
+	}
+	c.Flush()
+	assert(t, buf.String(), "")
 }
 
 func TestIncrement(t *testing.T) {
