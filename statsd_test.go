@@ -49,7 +49,7 @@ func TestDuration(t *testing.T) {
 		t.Fatal(err)
 	}
 	c.Flush()
-	assert(t, buf.String(), "timing:123.456789|ms")
+	assert(t, buf.String(), "timing:123|ms")
 }
 
 func TestIncrementRate(t *testing.T) {
