@@ -30,6 +30,17 @@ func TestIncrement(t *testing.T) {
 	assert(t, buf.String(), "incr:1|c")
 }
 
+func TestIncrement64(t *testing.T) {
+	buf := new(bytes.Buffer)
+	c := fakeClient(buf)
+	err := c.Increment64("incr64", 1099511627776, 1)
+	if err != nil {
+		t.Fatal(err)
+	}
+	c.Flush()
+	assert(t, buf.String(), "incr64:1099511627776|c")
+}
+
 func TestDecrement(t *testing.T) {
 	buf := new(bytes.Buffer)
 	c := fakeClient(buf)
@@ -39,6 +50,17 @@ func TestDecrement(t *testing.T) {
 	}
 	c.Flush()
 	assert(t, buf.String(), "decr:-1|c")
+}
+
+func TestDecrement64(t *testing.T) {
+	buf := new(bytes.Buffer)
+	c := fakeClient(buf)
+	err := c.Decrement("decr64", 1099511627778, 1)
+	if err != nil {
+		t.Fatal(err)
+	}
+	c.Flush()
+	assert(t, buf.String(), "decr64:-1099511627778|c")
 }
 
 func TestDuration(t *testing.T) {
