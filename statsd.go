@@ -45,7 +45,7 @@ func Dial(addr string) (*Client, error) {
 	if err != nil {
 		return nil, err
 	}
-	return newClient(conn, 0), nil
+	return NewClient(conn, 0), nil
 }
 
 // DialTimeout acts like Dial but takes a timeout. The timeout includes name resolution, if required.
@@ -54,7 +54,7 @@ func DialTimeout(addr string, timeout time.Duration) (*Client, error) {
 	if err != nil {
 		return nil, err
 	}
-	return newClient(conn, 0), nil
+	return NewClient(conn, 0), nil
 }
 
 // DialSize acts like Dial but takes a packet size.
@@ -64,10 +64,11 @@ func DialSize(addr string, size int) (*Client, error) {
 	if err != nil {
 		return nil, err
 	}
-	return newClient(conn, size), nil
+	return NewClient(conn, size), nil
 }
 
-func newClient(conn net.Conn, size int) *Client {
+// NewClient takes a connection and a packet size. You don't normally need to use this, but it can be useful if you want to customize the connection, eg: Use tcp instead of udp.
+func NewClient(conn net.Conn, size int) *Client {
 	if size <= 0 {
 		size = defaultBufSize
 	}
