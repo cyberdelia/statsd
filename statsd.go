@@ -17,6 +17,7 @@ package statsd
 
 import (
 	"bufio"
+	"errors"
 	"fmt"
 	"math/rand"
 	"net"
@@ -139,6 +140,10 @@ func (c *Client) Close() error {
 }
 
 func (c *Client) send(stat string, rate float64, format string, args ...interface{}) error {
+	if c.buf == nil {
+		return errors.New("client is no longer useable")
+	}
+
 	if rate < 1 {
 		if rand.Float64() < rate {
 			format = fmt.Sprintf("%s|@%g", format, rate)
@@ -147,13 +152,14 @@ func (c *Client) send(stat string, rate float64, format string, args ...interfac
 		}
 	}
 
-	format = fmt.Sprintf("%s:%s", stat, format)
+	format = fmt.Sprintf(fmt.Sprintf("%s:%s", stat, format), args...)
 
 	c.m.Lock()
 	defer c.m.Unlock()
 
 	// Flush data if we have reach the buffer limit
-	if c.buf.Available() < len(format) {
+	if c.buf.Available() < len(format) ||
+		(c.buf.Buffered() > 0 && c.buf.Available() < len(format)+1) {
 		if err := c.Flush(); err != nil {
 			return nil
 		}
@@ -164,6 +170,6 @@ func (c *Client) send(stat string, rate float64, format string, args ...interfac
 		format = fmt.Sprintf("\n%s", format)
 	}
 
-	_, err := fmt.Fprintf(c.buf, format, args...)
+	_, err := fmt.Fprint(c.buf, format)
 	return err
 }

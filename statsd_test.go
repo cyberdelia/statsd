@@ -206,3 +206,47 @@ func TestMultiPacketOverflow(t *testing.T) {
 	c.Flush()
 	assert(t, buf.String(), "unique:765|s")
 }
+
+func TestMultiPacketOverflowNewline(t *testing.T) {
+	buf := new(bytes.Buffer)
+	c := &Client{
+		buf: bufio.NewWriterSize(buf, 24),
+	}
+
+	//write to the buffer, sized at 12
+	err := c.Unique("unique", 765, 1)
+	if err != nil {
+		t.Fatal(err)
+	}
+	//make sure this write accounts for the newline
+	err = c.Unique("unique", 766, 1)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	assert(t, buf.String(), "unique:765|s")
+	buf.Reset()
+	c.Flush()
+	assert(t, buf.String(), "unique:766|s")
+}
+
+func TestMultiPacketExact(t *testing.T) {
+	buf := new(bytes.Buffer)
+	c := &Client{
+		buf: bufio.NewWriterSize(buf, 25),
+	}
+
+	//write to the buffer, sized at 12
+	err := c.Unique("unique", 765, 1)
+	if err != nil {
+		t.Fatal(err)
+	}
+	err = c.Unique("unique", 766, 1)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	assert(t, buf.String(), "")
+	c.Flush()
+	assert(t, buf.String(), "unique:765|s\nunique:766|s")
+}
