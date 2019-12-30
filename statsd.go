@@ -48,7 +48,7 @@ func Dial(addr string) (*Client, error) {
 	if err != nil {
 		return nil, err
 	}
-	return newClient(conn, 0), nil
+	return NewClient(conn, 0), nil
 }
 
 // DialTimeout acts like Dial but takes a timeout. The timeout includes name resolution, if required.
@@ -57,7 +57,7 @@ func DialTimeout(addr string, timeout time.Duration) (*Client, error) {
 	if err != nil {
 		return nil, err
 	}
-	return newClient(conn, 0), nil
+	return NewClient(conn, 0), nil
 }
 
 // DialSize acts like Dial but takes a packet size.  Packet size limits the
@@ -70,10 +70,11 @@ func DialSize(addr string, size int) (*Client, error) {
 	if err != nil {
 		return nil, err
 	}
-	return newClient(conn, size), nil
+	return NewClient(conn, size), nil
 }
 
-func newClient(conn net.Conn, size int) *Client {
+// NewClient takes a connection and a packet size. You don't normally need to use this, but it can be useful if you want to customize the connection, eg: Use tcp instead of udp.
+func NewClient(conn net.Conn, size int) *Client {
 	if size <= 0 {
 		size = defaultBufSize
 	}
@@ -89,9 +90,18 @@ func (c *Client) Increment(stat string, count int, rate float64) error {
 	return c.send(stat, rate, "%d|c", count)
 }
 
+// Increment increments the counter for the given bucket.
+func (c *Client) Increment64(stat string, count int64, rate float64) error {
+	return c.send(stat, rate, "%d|c", count)
+}
+
 // Decrement decrements the counter for the given bucket.
 func (c *Client) Decrement(stat string, count int, rate float64) error {
 	return c.Increment(stat, -count, rate)
+}
+
+func (c *Client) Decrement64(stat string, count int64, rate float64) error {
+	return c.Increment64(stat, -count, rate)
 }
 
 // Duration records time spent for the given bucket with time.Duration.
